@@ -86,8 +86,9 @@ Expression* readFromTokens(std::vector<std::string>::const_iterator& begin, std:
     if (token == "(")
     {
 
-        while (++begin != end && *begin != ")") {
-            expr->list.push_back(readFromTokens(begin, end));
+        while (++begin != end && *begin != ")") 
+        {
+          expr->list.push_back(readFromTokens(begin, end));
         }
 
         if (begin == end)
@@ -96,10 +97,14 @@ Expression* readFromTokens(std::vector<std::string>::const_iterator& begin, std:
         ++begin; // pop off ')'
     }
     else if (token == ")")
-        throw std::runtime_error("unexpected )");
-    else {
+    {
+      throw std::runtime_error("unexpected )");
+    }
+    else 
+    {
       expr->isAtom = true;
       expr->atom = token;
+      std::cout << token << std::endl;
     }
 
     return expr;
@@ -107,9 +112,15 @@ Expression* readFromTokens(std::vector<std::string>::const_iterator& begin, std:
 
 int main()
 {
+  try {
   std::string schemeCode = "(begin (define r 10) (* pi (* r r)))";
 
   std::vector<std::string> tokens = tokenize(schemeCode);
+
+  for (auto& t : tokens)
+    std::cout << t;
+
+  std::cout << std::endl;
 
   auto begin = tokens.cbegin();
   auto end = tokens.cend();
@@ -119,9 +130,11 @@ int main()
   std::cout << expr->list.size() << std::endl;
   std::cout << expr->toString() << std::endl;
 
-  //for (auto& s : tokenize(schemeCode))
-  //  std::cout << s << std::endl;
 
+  }
+  catch (std::exception& e) {
+    std::cerr << e.what() << std::endl;
+  }
 
   return 0;
 }
