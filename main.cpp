@@ -82,11 +82,11 @@ Expression* readFromTokens(std::vector<std::string>::const_iterator& begin, std:
 
     Expression* expr = new Expression;
 
-    auto token = *begin;
+    auto token = *begin++;
     if (token == "(")
     {
 
-        while (++begin != end && *begin != ")") 
+        while (begin != end && *begin != ")") 
         {
           expr->list.push_back(readFromTokens(begin, end));
         }
@@ -104,7 +104,6 @@ Expression* readFromTokens(std::vector<std::string>::const_iterator& begin, std:
     {
       expr->isAtom = true;
       expr->atom = token;
-      std::cout << token << std::endl;
     }
 
     return expr;
