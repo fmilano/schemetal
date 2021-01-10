@@ -3,7 +3,33 @@
 #include <sstream>
 #include <regex>
 #include <algorithm>
+#include <variant>
 
+// 
+// Outputs std::variant to stream
+// 
+template<class T>
+struct streamer {
+    const T& val;
+};
+template<class T> streamer(T) -> streamer<T>;
+
+template<class T>
+std::ostream& operator<<(std::ostream& os, streamer<T> s) {
+    os << s.val;
+    return os;
+}
+
+template<class... Ts>
+std::ostream& operator<<(std::ostream& os, streamer<std::variant<Ts...>> sv) {
+   std::visit([&os](const auto& v) { os << streamer{v}; }, sv.val);
+   return os;
+}
+
+// 
+// Represents atomic type
+//
+using Atom=std::variant<double, std::string>;
 
 // trim from start (in place)
 static inline void ltrim(std::string &s) {
@@ -48,8 +74,8 @@ struct Expression {
   Expression () : isAtom{false} {}
 
   bool isAtom;
-  std::vector<Expression*> list;
-  std::string              atom;
+  std::vector<Expression> list;
+  Atom                    atom;
 
   std::string toString() 
   {
@@ -57,14 +83,14 @@ struct Expression {
 
     if (isAtom)
     {
-      ss << atom;
+      ss << streamer{atom};
     }
     else 
     {
       ss << "[ ";
       for (auto e : list)
       {
-        ss << e->toString();
+        ss << e.toString();
         ss << ", ";
       }
       ss << " ]";
@@ -74,39 +100,50 @@ struct Expression {
   }
 };
 
-Expression* readFromTokens(std::vector<std::string>::const_iterator& begin, std::vector<std::string>::const_iterator& end)
+Expression readFromTokens(std::vector<std::string>::const_iterator& begin, std::vector<std::string>::const_iterator& end)
 {
     // Read an expression from a sequence of tokens.
     if (begin == end)
-        throw std::runtime_error("unexpected EOF");
-
-    Expression* expr = new Expression;
+        throw std::runtime_error("unexpected EOF");    
 
     auto token = *begin++;
     if (token == "(")
     {
-
+        Expression expr;
         while (begin != end && *begin != ")") 
         {
-          expr->list.push_back(readFromTokens(begin, end));
+          expr.list.push_back(readFromTokens(begin, end));
         }
 
         if (begin == end)
           throw std::runtime_error("missing )");
 
         ++begin; // pop off ')'
+
+        return expr;
     }
-    else if (token == ")")
+    else if (token != ")")
     {
-      throw std::runtime_error("unexpected )");
-    }
-    else 
-    {
-      expr->isAtom = true;
-      expr->atom = token;
+      Expression expr;
+      expr.isAtom = true;
+
+      bool isNumeric = true;
+      try 
+      {
+        expr.atom = std::stod(token);
+      }
+      catch (std::invalid_argument& e) 
+      {
+        isNumeric = false;
+      }
+
+      if (!isNumeric)
+        expr.atom = token;
+
+      return expr;
     }
 
-    return expr;
+    throw std::runtime_error("unexpected )");
 }
 
 int main()
@@ -124,10 +161,10 @@ int main()
   auto begin = tokens.cbegin();
   auto end = tokens.cend();
 
-  Expression* expr = readFromTokens(begin, end);
+  Expression expr = readFromTokens(begin, end);
 
-  std::cout << expr->list.size() << std::endl;
-  std::cout << expr->toString() << std::endl;
+  std::cout << expr.list.size() << std::endl;
+  std::cout << expr.toString() << std::endl;
 
 
   }
